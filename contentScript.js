@@ -1418,12 +1418,31 @@
     };
     const amt = getCheckerAmountIndices(table);
     const to = getCheckerToIndices(table);
+    const getCheckerFirstDepoDateIndex = (table) => {
+      const ths = Array.from(table.querySelectorAll('thead th, thead td')).map(el => (el.innerText || el.textContent || '').trim());
+      const thsNorm = ths.map(norm);
+      let idx = thsNorm.findIndex(h => h.includes('first depo') || h.includes('first deposit') || h.includes('first depo date'));
+      if (idx < 0) {
+        const sampleRow = table.querySelector('tbody tr');
+        if (sampleRow) {
+          const cells = Array.from(sampleRow.querySelectorAll('td'));
+          const candidates = cells.map((td, i) => ({ i, txt: (td.innerText || td.textContent || '').trim() }))
+            .filter(o => /(\d{4})[-\/]\d{2}[-\/]\d{2}/.test(o.txt) || /\d{2}[\/-]\d{2}[\/-]\d{4}/.test(o.txt))
+            .map(o => o.i);
+          const candByHeader = candidates.find(i => (thsNorm[i] || '').includes('first depo') || (thsNorm[i] || '').includes('first deposit'));
+          if (candByHeader !== undefined) idx = candByHeader;
+          else if (candidates.length) idx = candidates[0];
+        }
+      }
+      return idx;
+    };
     const idx = {
       username: getCheckerUsernameIndex(table),
       acc_name: findIdx(['acc name','account name','account','name']),
       bank: findIdx('bank'),
       balance: amt.balance,
       first_deposit_amt: amt.first_deposit_amt,
+      first_depo_date: getCheckerFirstDepoDateIndex(table),
       bonus_new: findIdx(['bonus new','bonus']),
       redepo_count: findIdx(['redepo','redeposit','redapo']),
       total_redepo_amt: amt.total_redepo_amt,
@@ -1448,7 +1467,7 @@
     for (const tr of dataRows) {
       const tds = Array.from(tr.querySelectorAll('td'));
       const pick = (i) => (i >= 0 && i < tds.length ? (tds[i].innerText || tds[i].textContent || '').trim().replace(/\r?\n+/g, ' ') : '');
-      const arr = new Array(17).fill('');
+      const arr = new Array(18).fill('');
       arr[1] = pick(idx.username);
       arr[2] = pick(idx.first_deposit_amt);
       arr[3] = pick(idx.bonus_new);
@@ -1464,6 +1483,7 @@
       arr[14] = pick(idx.bank);
       arr[15] = pick(idx.balance);
       arr[16] = pick(idx.last_login_ip);
+      arr[17] = pick(idx.first_depo_date);
       lines.push(arr.join('\t'));
     }
     return lines.join('\n');
